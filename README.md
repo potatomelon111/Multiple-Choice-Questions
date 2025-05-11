@@ -17,3 +17,7 @@ python mcqs.py "C:/path/to/md/file.md"
 ```
 
 This will generate a pdf in the same directory with your MCQs.
+
+(Here's an example of what it does - markdown on the left, pdf on the right)
+![image](https://github.com/user-attachments/assets/1f87a9b4-bfb9-48dc-9948-b7621eb2919c)
+
