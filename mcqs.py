@@ -4,6 +4,7 @@ from reportlab.lib.units import mm
 from reportlab.lib.colors import HexColor
 import textwrap
 import os
+import re
 
 def parse_md(file_path):
     with open(file_path, 'r', encoding='utf-8') as f:
@@ -30,6 +31,35 @@ def parse_md(file_path):
 
     return questions
 
+def split_bold_parts(text):
+    """
+    Splits text into parts, marking which parts are bold.
+    Returns a list of (text, is_bold) tuples.
+    Example: 'This is **bold** text' → [('This is ', False), ('bold', True), (' text', False)]
+    """
+    pattern = r"\*\*(.*?)\*\*"
+    parts = []
+    last_end = 0
+    for match in re.finditer(pattern, text):
+        start, end = match.span()
+        if start > last_end:
+            parts.append((text[last_end:start], False))
+        parts.append((match.group(1), True))
+        last_end = end
+    if last_end < len(text):
+        parts.append((text[last_end:], False))
+    return parts
+
+def draw_rich_text(c, x, y, text, font_size=12):
+    parts = split_bold_parts(text)
+    cursor_x = x
+    for part, is_bold in parts:
+        font = "Helvetica-Bold" if is_bold else "Helvetica"
+        c.setFont(font, font_size)
+        text_width = c.stringWidth(part, font, font_size)
+        c.drawString(cursor_x, y, part)
+        cursor_x += text_width
+
 def draw_oval_in_rect(c, x, y, width=14, height=10):
     c.rect(x, y, width, height)
     inset = 2
@@ -51,18 +81,17 @@ def create_pdf(md_path):
         c.setFont("Helvetica", 14)
         wrapped = textwrap.wrap(f"Q{question_number}. {q['question']}", width=90)
         for line in wrapped:
-            c.drawString(x_text, y, line)
+            draw_rich_text(c, x_text, y, line, font_size=14)
             y -= 16
 
-        y -= 6
+        y -= 6  # space between question and options
 
-        c.setFont("Helvetica", 12)
         option_labels = ['A', 'B', 'C', 'D']
         for i, option in enumerate(q['options']):
             line = f"{option_labels[i]} {option}"
             wrapped_opt = textwrap.wrap(line, width=80)
             for j, line in enumerate(wrapped_opt):
-                c.drawString(x_text + 10, y, line)
+                draw_rich_text(c, x_text + 10, y, line, font_size=12)
                 if j == 0:
                     draw_oval_in_rect(c, page_width - margin - 20, y - 3, width=14, height=10)
                 y -= 14
@@ -86,6 +115,6 @@ def create_pdf(md_path):
 if __name__ == "__main__":
     import sys
     if len(sys.argv) != 2:
-        print("Usage: python md_to_pdf.py input.md")
+        print("Usage: python mcqs.py input.md")
     else:
         create_pdf(sys.argv[1])
